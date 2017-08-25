@@ -128,11 +128,7 @@ public class AddEventActivity extends AppCompatActivity implements View.OnClickL
                                         event_days,
                                         event_location,
                                         event_desc);
-            try {
-                new_event.saveData(this,"TEMP",new_event);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+
             event_error.setText("DONE");
             startActivity(new Intent(this, MainActivity.class));
         }

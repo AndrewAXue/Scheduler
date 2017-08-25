@@ -3,16 +3,35 @@ package com.example.scheduler;
 import android.content.Context;
 import android.util.Log;
 
+import android.content.Context;
+import android.content.Intent;
+import android.support.v7.app.AppCompatActivity;
+import android.os.Bundle;
+import android.util.Log;
+import android.view.View;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
+import android.widget.Button;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.ObjectOutput;
+import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
+
 
 /**
  * Created by Andrew on 8/23/2017.
  */
 
-public class event {
+public class event implements Serializable{
     String name;
     int starttime_hour;
     int starttime_min;
@@ -65,14 +84,18 @@ public class event {
         desc = "test desc";
     }
 
-    public void saveData(Context context,String file_name,event object) throws IOException{
-        Log.d("debug","saving event");
-        FileOutputStream fos = context.openFileOutput(file_name, Context.MODE_PRIVATE);
-        ObjectOutputStream oos = new ObjectOutputStream(fos);
-        event tst = new event();
-        oos.writeObject(tst);
-        oos.close();
-        fos.close();
-        Log.d("debug","saved event");
+    public void saveData(Context context,String file_name){
+        try {
+
+            FileOutputStream fos = context.openFileOutput(file_name, Context.MODE_PRIVATE);
+            ObjectOutputStream oos = new ObjectOutputStream(fos);
+            oos.writeObject(this);
+            oos.close();
+            fos.close();
+            Log.d("debug","event saved");
+        } catch (Exception e) {
+            e.printStackTrace();
+            Log.d("debug","excep");
+        }
     }
 }
