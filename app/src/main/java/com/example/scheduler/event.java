@@ -27,6 +27,7 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 
 
@@ -35,6 +36,7 @@ import java.util.List;
  */
 
 public class event implements Serializable, Comparable<event>{
+    int event_num;
     String name;
     int starttime_hour;
     int starttime_min;
@@ -43,11 +45,12 @@ public class event implements Serializable, Comparable<event>{
     int endtime_min;
     String endtime_am;
     boolean day[] = new boolean[7];
-    String day_string[] = {"Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"};
+    static String day_string[] = {"Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"};
     String location;
     String desc;
     boolean weekly;
     boolean one_time;
+    String marked_for_death = "";
 
     event(String temp_name,
           int temp_starttime_hour,
@@ -95,27 +98,31 @@ public class event implements Serializable, Comparable<event>{
     }
 
     public void saveData(Context context){
-        for (int i=0;i<7;i++){
-            if (day[i]){
-                try {
-                    SharedPreferences shared = context.getSharedPreferences(day_string[i],Context.MODE_PRIVATE);
-                    SharedPreferences.Editor edit = shared.edit();
-                    int new_key = shared.getInt(day_string[i]+"_num_events",0);
-                    edit.putInt(day_string[i]+"_num_events",new_key+1);
+        try {
+            SharedPreferences shared = context.getSharedPreferences("events",Context.MODE_PRIVATE);
+            SharedPreferences.Editor edit = shared.edit();
+            int new_key = shared.getInt("num_events",0);
+            edit.putInt("num_events",new_key+1);
+            edit.commit();
+
+            for (int i=0;i<7;i++){
+                if (day[i]){
+                    edit.putInt(day_string[i]+"_num_events",shared.getInt(day_string[i]+"_num_events",0)+1);
                     edit.commit();
-
-                    FileOutputStream fos = context.openFileOutput(day_string[i]+"_event_"+new_key, Context.MODE_PRIVATE);
-                    ObjectOutputStream oos = new ObjectOutputStream(fos);
-                    oos.writeObject(this);
-                    oos.close();
-                    fos.close();
-                    Log.d("debug","event written to "+day_string[i]+"_event_"+new_key);
-
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    Log.d("debug","excep");
                 }
             }
+            this.event_num = new_key;
+
+            FileOutputStream fos = context.openFileOutput("event_"+new_key, Context.MODE_PRIVATE);
+            ObjectOutputStream oos = new ObjectOutputStream(fos);
+            oos.writeObject(this);
+            oos.close();
+            fos.close();
+            Log.d("debug","event written to "+"event_"+new_key);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            Log.d("debug","excep");
         }
     }
 
@@ -123,7 +130,7 @@ public class event implements Serializable, Comparable<event>{
 
     public static event retreivedata(Context context, String file_name){
         try {
-            //Log.d("debug","retreiving event form "+file_name);
+            Log.d("debug","retreiving event from "+file_name);
             FileInputStream inp = context.openFileInput(file_name);
             ObjectInputStream ois = new ObjectInputStream(inp);
             event retreived = (event) ois.readObject();
@@ -139,61 +146,61 @@ public class event implements Serializable, Comparable<event>{
 
     public static void clear_date(Context context, String date){
         Log.d("debug","deleting all "+date+" events");
-        boolean all_deleted = true;
-        SharedPreferences shared = context.getSharedPreferences(date,Context.MODE_PRIVATE);
+        int day_ind = event.day_to_ind(date);
+
+        SharedPreferences shared = context.getSharedPreferences("events",Context.MODE_PRIVATE);
         SharedPreferences.Editor edit = shared.edit();
-        int new_key = shared.getInt(date+"_num_events",0);
-        edit.putInt(date+"_num_events",0);
-        edit.commit();
+        int new_key = shared.getInt("num_events",0);
 
         for (int i=0;i<new_key;i++){
-            File file = context.getFileStreamPath(date+"_event_"+i);
-            boolean success = file.delete();
-            if (!success){
-                all_deleted = false;
+            event cur_event = event.retreivedata(context,"event_"+i);
+            if (cur_event.day[day_ind]){
+                delete_event(context,i);
+                i--;
+                new_key--;
             }
         }
-        if (all_deleted) Log.d("debug","all events deleted");
-        else Log.d("debug","OH BOY NOT dEletED");
+        edit.putInt("num_events",new_key);
+        edit.commit();
     }
 
-    public static void delete_event(Context context, String date, int event_num){
-        /*
-        String[] allfiles = context.fileList();
-        for (int i=0;i<allfiles.length;i++){
-            Log.d("debug","file  "+allfiles[i]);
-        }
-
-        File oldfile = context.getFileStreamPath("Saturday_event_0");
-        File newfile = context.getFileStreamPath("Saturday_event_2");
-        newfile.renameTo(oldfile);
-        Log.d("debug","renamed");
-
-        String[] aallfiles = context.fileList();
-        for (int i=0;i<aallfiles.length;i++){
-            Log.d("debug","file  "+aallfiles[i]);
-        }
-        */
-        SharedPreferences shared = context.getSharedPreferences(date,Context.MODE_PRIVATE);
-        int new_key = shared.getInt(date+"_num_events",0);
-
-        String[] allfiles = context.fileList();
-        for (int i=0;i<allfiles.length;i++){
-            Log.d("debug",allfiles[i]);
-        }
-
+    public static void delete_event(Context context, int event_num){
+        SharedPreferences shared = context.getSharedPreferences("events",Context.MODE_PRIVATE);
+        int new_key = shared.getInt("num_events",0);
         SharedPreferences.Editor edit = shared.edit();
-        edit.putInt(date+"_num_events",new_key-1);
+        edit.putInt("num_events",new_key-1);
         edit.commit();
 
-        File file = context.getFileStreamPath(date+"_event_"+event_num);
+        event retreived = event.retreivedata(context,"event_"+event_num);
+        for (int i=0;i<7;i++){
+            if (retreived.day[i]){
+                edit.putInt(day_string[i]+"_num_events",shared.getInt(day_string[i]+"_num_events",0)-1);
+                edit.commit();
+            }
+        }
+
+        File file = context.getFileStreamPath("event_"+event_num);
         if (!(event_num == new_key - 1)){
-            File rename_file = context.getFileStreamPath(date+"_event_"+(new_key-1));
+            File rename_file = context.getFileStreamPath("event_"+(new_key-1));
             rename_file.renameTo(file);
+
+            event rename = event.retreivedata(context,"event_"+event_num);
+            rename.event_num = event_num;
+
+            try {
+                FileOutputStream fos = context.openFileOutput("event_"+event_num, Context.MODE_PRIVATE);
+                ObjectOutputStream oos = new ObjectOutputStream(fos);
+                oos.writeObject(rename);
+                oos.close();
+                fos.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
         else{
             file.delete();
         }
+        Log.d("debug","event_"+event_num+" deleted");
     }
 
     @Override
@@ -204,6 +211,9 @@ public class event implements Serializable, Comparable<event>{
         }
         else{
             time_one = this.starttime_hour*60+this.starttime_min;
+            if (this.starttime_am.charAt(0)=='p'){
+                time_one+=60*12;
+            }
         }
         int time_two;
         if (compare_event.starttime_am.charAt(0)=='a'&&compare_event.starttime_hour==12){
@@ -211,7 +221,37 @@ public class event implements Serializable, Comparable<event>{
         }
         else{
             time_two = compare_event.starttime_hour*60+compare_event.starttime_min;
+            if (compare_event.starttime_am.charAt(0)=='p'){
+                time_two+=60*12;
+            }
         }
         return time_one-time_two;
+    }
+
+    public static int day_to_ind(String date){
+        int day_ind = -1;
+        if (date.charAt(0)=='M'){
+            return 0;
+        }
+        else if (date.charAt(2)=='e'){
+            return 1;
+        }
+        else if (date.charAt(0)=='W'){
+            return 2;
+        }
+        else if (date.charAt(0)=='T'){
+            return 3;
+        }
+        else if (date.charAt(0)=='F'){
+            return 4;
+        }
+        else if (date.charAt(2)=='t'){
+            return 5;
+        }
+        else if (date.charAt(0)=='S'){
+            return 6;
+        }
+        Log.d("debug","could not find date");
+        return 0;
     }
 }
