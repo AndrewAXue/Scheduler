@@ -24,6 +24,7 @@
         android:id="@+id/event_check_6"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:checked="true"
         app:layout_constraintLeft_toRightOf="@+id/event_check_5"
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toTopOf="@+id/event_check_5" />
@@ -370,6 +371,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="0dp"
+        android:checked="true"
         android:text="Weekly"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toLeftOf="@+id/event_one_time"
